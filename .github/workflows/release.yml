@@ -3,27 +3,33 @@ name: Release
 on:
   push:
     tags:
-      - 'v*' # Trigger on version tags (e.g., v0.1.0)
+      - "v*"
 
 jobs:
   build:
-    name: Build & Release
+    name: Build binaries
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact_name: langscan-linux-amd64
+            artifact: langscan-linux-amd64
           - os: macos-latest
             target: x86_64-apple-darwin
-            artifact_name: langscan-macos-amd64
-          - os: macos-14 # Apple Silicon runner
+            artifact: langscan-macos-amd64
+          - os: macos-14
             target: aarch64-apple-darwin
-            artifact_name: langscan-macos-arm64
+            artifact: langscan-macos-arm64
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set version from git tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          sed -i "0,/^version = \".*\"/s//version = \"$VERSION\"/" Cargo.toml
+          cat Cargo.toml
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -31,15 +37,19 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Build
-        run: cargo build --release --target ${{ matrix.target }} && mkdir -p dist && cp target/${{ matrix.target }}/release/langscan dist/${{ matrix.artifact_name }}
+        run: |
+          cargo build --release --target ${{ matrix.target }}
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/langscan dist/${{ matrix.artifact }}
 
-      - name: Upload Artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
-          path: dist/${{ matrix.artifact_name }}
+          name: ${{ matrix.artifact }}
+          path: dist/${{ matrix.artifact }}
 
   release:
+    name: GitHub Release
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -51,7 +61,7 @@ jobs:
         with:
           path: artifacts
 
-      - name: Create Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
@@ -59,6 +69,7 @@ jobs:
           generate_release_notes: true
 
   update-formula:
+    name: Update Homebrew Formula
     needs: release
     runs-on: ubuntu-latest
     permissions:
@@ -71,48 +82,34 @@ jobs:
           path: artifacts
 
       - name: Update Formula
-        env:
-          VERSION: ${{ github.ref_name }}
-          REPO: ${{ github.repository }}
         run: |
-          # Strip 'v' from version if present for the formula version field
-          FORMULA_VERSION="${VERSION#v}"
-          
-          # Calculate SHA256 checks
-          SHA_MACOS_AMD64=$(sha256sum artifacts/langscan-macos-amd64/langscan-macos-amd64 | awk '{ print $1 }')
-          SHA_MACOS_ARM64=$(sha256sum artifacts/langscan-macos-arm64/langscan-macos-arm64 | awk '{ print $1 }')
-          SHA_LINUX_AMD64=$(sha256sum artifacts/langscan-linux-amd64/langscan-linux-amd64 | awk '{ print $1 }')
+          VERSION="${GITHUB_REF_NAME#v}"
+          REPO="${GITHUB_REPOSITORY}"
 
-          # Update Version in Formula
-          sed -i "s/version \".*\"/version \"$FORMULA_VERSION\"/" Formula/langscan.rb
+          SHA_LINUX=$(sha256sum artifacts/langscan-linux-amd64/langscan-linux-amd64 | awk '{print $1}')
+          SHA_MAC_AMD=$(sha256sum artifacts/langscan-macos-amd64/langscan-macos-amd64 | awk '{print $1}')
+          SHA_MAC_ARM=$(sha256sum artifacts/langscan-macos-arm64/langscan-macos-arm64 | awk '{print $1}')
 
-          # Update Version in Cargo.toml
-          sed -i "0,/^version = \".*\"/s//version = \"$FORMULA_VERSION\"/" Cargo.toml
+          sed -i "s/version \".*\"/version \"$VERSION\"/" Formula/langscan.rb
 
-          # Update macOS Intel (amd64)
-          sed -i -E "/url \".*langscan-macos-amd64\"/!b;n;s/sha256 \".*\"/sha256 \"$SHA_MACOS_AMD64\"/" Formula/langscan.rb
-          sed -i "s|url \".*langscan-macos-amd64\"|url \"https://github.com/$REPO/releases/download/$VERSION/langscan-macos-amd64\"|" Formula/langscan.rb
+          sed -i "s|url \".*langscan-linux-amd64\"|url \"https://github.com/$REPO/releases/download/v$VERSION/langscan-linux-amd64\"|" Formula/langscan.rb
+          sed -i "s/sha256 \".*\"/sha256 \"$SHA_LINUX\"/1" Formula/langscan.rb
 
-          # Update macOS ARM (arm64)
-          sed -i -E "/url \".*langscan-macos-arm64\"/!b;n;s/sha256 \".*\"/sha256 \"$SHA_MACOS_ARM64\"/" Formula/langscan.rb
-          sed -i "s|url \".*langscan-macos-arm64\"|url \"https://github.com/$REPO/releases/download/$VERSION/langscan-macos-arm64\"|" Formula/langscan.rb
+          sed -i "s|url \".*langscan-macos-amd64\"|url \"https://github.com/$REPO/releases/download/v$VERSION/langscan-macos-amd64\"|" Formula/langscan.rb
+          sed -i "s/sha256 \".*\"/sha256 \"$SHA_MAC_AMD\"/2" Formula/langscan.rb
 
-          # Update Linux AMD64
-          sed -i -E "/url \".*langscan-linux-amd64\"/!b;n;s/sha256 \".*\"/sha256 \"$SHA_LINUX_AMD64\"/" Formula/langscan.rb
-          sed -i "s|url \".*langscan-linux-amd64\"|url \"https://github.com/$REPO/releases/download/$VERSION/langscan-linux-amd64\"|" Formula/langscan.rb
+          sed -i "s|url \".*langscan-macos-arm64\"|url \"https://github.com/$REPO/releases/download/v$VERSION/langscan-macos-arm64\"|" Formula/langscan.rb
+          sed -i "s/sha256 \".*\"/sha256 \"$SHA_MAC_ARM\"/3" Formula/langscan.rb
 
-          # Update Homepage if it still points to the old repo (optional, but good for consistency)
           sed -i "s|homepage \".*\"|homepage \"https://github.com/$REPO\"|" Formula/langscan.rb
 
-          # Verify the changes
+          echo "===== UPDATED FORMULA ====="
           cat Formula/langscan.rb
-          cat Cargo.toml
 
-      - name: Commit and Push
+      - name: Commit and push formula
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add Formula/langscan.rb Cargo.toml
-          git commit -m "Update version to ${{ github.ref_name }} [skip ci]" || echo "No changes to commit"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/langscan.rb
+          git commit -m "chore: bump Homebrew formula to ${GITHUB_REF_NAME}" || echo "No changes"
           git push origin HEAD:main
-
