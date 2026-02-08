@@ -13,9 +13,6 @@ use crate::scanner::{Scanner, PathScanner};
 struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
-
-    #[arg(short = 'v', long = "v")]
-    version_flag: bool,
 }
 
 #[derive(Subcommand)]
@@ -26,15 +23,12 @@ enum Commands {
         #[arg(short, long, default_value = "table")]
         format: String,
     },
+    /// Print version information
+    Version,
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-
-    if cli.version_flag {
-        println!("langscan {}", env!("CARGO_PKG_VERSION"));
-        return Ok(());
-    }
 
     match &cli.command {
         Some(Commands::Scan { format }) => {
@@ -62,6 +56,9 @@ fn main() -> Result<()> {
                     println!("{table}");
                 }
             }
+        }
+        Some(Commands::Version) => {
+            println!("langscan {}", env!("CARGO_PKG_VERSION"));
         }
         None => {
             Cli::command().print_help()?;
