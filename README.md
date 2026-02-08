@@ -68,8 +68,9 @@ The binary will be located at `target/release/langscan`.
 
 ### Examples
 
-#### 1. Basic Scan (Default Table)
-Run a quick scan to see all detected languages in a formatted table:
+### 1. Scan for Languages
+
+Inventory all programming languages on your system:
 
 ```bash
 langscan scan

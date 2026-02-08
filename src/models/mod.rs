@@ -6,6 +6,8 @@ pub struct Language {
     pub name: String,
     pub version: String,
     pub toolchain: Toolchain,
+    pub size: u64,
+    pub modified_at: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -20,6 +22,9 @@ pub struct Component {
     pub version: String,
     pub path: PathBuf,
     pub kind: ComponentKind,
+    pub size: u64,
+    pub created_at: Option<u64>,
+    pub modified_at: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

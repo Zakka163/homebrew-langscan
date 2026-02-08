@@ -1,6 +1,7 @@
 use anyhow::Result;
 use which::which;
 use std::process::Command;
+use std::time::UNIX_EPOCH;
 use crate::models::{Language, Toolchain, Component, ComponentKind};
 
 pub trait Scanner {
@@ -169,9 +170,24 @@ impl PathScanner {
 
     fn create_language(&self, name: &str, cmd: &str, path: std::path::PathBuf, raw_version: String, kind: ComponentKind) -> Language {
         let version = self.extract_version(&raw_version, cmd);
+        
+        // Fetch metadata
+        let metadata = std::fs::metadata(&path).ok();
+        let size = metadata.as_ref().map(|m| m.len()).unwrap_or(0);
+        let modified_at = metadata.as_ref()
+            .and_then(|m| m.modified().ok())
+            .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+            .map(|d| d.as_secs());
+        let created_at = metadata.as_ref()
+            .and_then(|m| m.created().ok())
+            .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+            .map(|d| d.as_secs());
+
         Language {
             name: name.to_string(),
             version: version.clone(),
+            size,
+            modified_at,
             toolchain: Toolchain {
                 path: path.clone(),
                 components: vec![
@@ -180,6 +196,9 @@ impl PathScanner {
                         version,
                         path,
                         kind,
+                        size,
+                        created_at,
+                        modified_at,
                     }
                 ]
             }
