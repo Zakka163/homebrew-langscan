@@ -13,15 +13,13 @@ A high-performance CLI tool to inventory languages, toolchains, and runtimes on 
 
 ## Supported Languages
 
-Langscan currently detects the following environments:
+Langscan currently detects 27+ programming environments and toolchains:
 
-- **Rust** (`rustc`)
-- **Go** (`go`)
-- **Python** (`python3` / `python`)
-- **Node.js** (`node`)
-- **Java** (`java`)
-- **Ruby** (`ruby`)
-- **PHP** (`php`)
+- **System**: Rust, Go, C (gcc), C++ (g++), Clang, Swift, Zig, Nim, Crystal, Dart
+- **JVM**: Java, Kotlin, Scala
+- **Scripting**: Python, Node.js, Bun, Deno, Ruby, PHP, Perl, Lua
+- **Functional**: Elixir, Erlang, Clojure, Haskell (ghc)
+- **Data Science**: Julia, R
 
 ## Installation
 

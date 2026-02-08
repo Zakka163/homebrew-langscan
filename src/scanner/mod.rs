@@ -131,13 +131,13 @@ impl PathScanner {
     fn extract_version(&self, output: &str, tool: &str) -> String {
         let trimmed = output.trim();
         match tool {
-            "rustc" => {
+            "rustc" | "kotlinc" | "scalac" | "julia" | "R" | "lua" | "deno" => {
                 trimmed.split_whitespace().nth(1).unwrap_or(trimmed).to_string()
             },
             "python" | "python3" => {
                 trimmed.split_whitespace().nth(1).unwrap_or(trimmed).to_string()
             },
-            "node" => {
+            "node" | "bun" | "zig" => {
                 trimmed.trim_start_matches('v').to_string()
             },
             "java" => {
@@ -151,19 +151,47 @@ impl PathScanner {
                      trimmed.to_string()
                  }
             },
-            "ruby" => {
+            "ruby" | "php" | "dart" | "crystal" => {
                 trimmed.split_whitespace().nth(1).unwrap_or(trimmed).to_string()
             },
-            "php" => {
-                trimmed.split_whitespace().nth(1).unwrap_or(trimmed).to_string()
-            },
-             "go" => {
+            "go" | "clojure" | "nim" => {
                 if let Some(v_part) = trimmed.split_whitespace().nth(2) {
                     v_part.trim_start_matches("go").to_string()
+                } else if tool == "clojure" || tool == "nim" {
+                    trimmed.split_whitespace().nth(3).unwrap_or(trimmed).to_string()
                 } else {
                     trimmed.to_string()
                 }
             },
+            "gcc" | "g++" | "clang" => {
+                trimmed.lines().next()
+                    .and_then(|l| l.split_whitespace().last())
+                    .unwrap_or(trimmed).to_string()
+            },
+            "swift" => {
+                trimmed.lines()
+                    .find(|l| l.contains("Swift version"))
+                    .and_then(|l| l.split("version ").nth(1))
+                    .and_then(|s| s.split_whitespace().next())
+                    .unwrap_or(trimmed).to_string()
+            },
+            "elixir" => {
+                trimmed.lines()
+                    .find(|l| l.contains("Elixir"))
+                    .and_then(|l| l.split_whitespace().nth(1))
+                    .unwrap_or(trimmed).to_string()
+            },
+            "ghc" => {
+                trimmed.split_whitespace().last().unwrap_or(trimmed).to_string()
+            },
+            "perl" => {
+                if let Some(v_part) = trimmed.split('(').nth(1) {
+                    v_part.split(')').next().unwrap_or(v_part).trim_start_matches('v').to_string()
+                } else {
+                    trimmed.to_string()
+                }
+            },
+            "erl" => trimmed.to_string(), // Handled by specific eval command
             _ => trimmed.to_string()
         }
     }
@@ -225,33 +253,97 @@ impl Scanner for PathScanner {
             languages.push(self.create_language("Go", "go", path, version, ComponentKind::Compiler));
         }
 
-        // Python 3
+        // C / C++ / Clang
+        if let Some((path, version)) = self.check_command("gcc", "--version") {
+            languages.push(self.create_language("C", "gcc", path, version, ComponentKind::Compiler));
+        }
+        if let Some((path, version)) = self.check_command("g++", "--version") {
+            languages.push(self.create_language("C++", "g++", path, version, ComponentKind::Compiler));
+        }
+        if let Some((path, version)) = self.check_command("clang", "--version") {
+            languages.push(self.create_language("Clang", "clang", path, version, ComponentKind::Compiler));
+        }
+
+        // JVM Languages
+        if let Some((path, version)) = self.check_command("java", "-version") {
+            let first_line = version.lines().next().unwrap_or(&version).to_string();
+            languages.push(self.create_language("Java", "java", path, first_line, ComponentKind::Interpreter));
+        }
+        if let Some((path, version)) = self.check_command("kotlinc", "-version") {
+            languages.push(self.create_language("Kotlin", "kotlinc", path, version, ComponentKind::Compiler));
+        }
+        if let Some((path, version)) = self.check_command("scalac", "-version") {
+            languages.push(self.create_language("Scala", "scalac", path, version, ComponentKind::Compiler));
+        }
+
+        // Scripting Languages
         if let Some((path, version)) = self.check_command("python3", "--version") {
              languages.push(self.create_language("Python", "python3", path, version, ComponentKind::Interpreter));
         } else if let Some((path, version)) = self.check_command("python", "--version") {
              languages.push(self.create_language("Python", "python", path, version, ComponentKind::Interpreter));
         }
-
-        // Node.js
-        if let Some((path, version)) = self.check_command("node", "--version") {
-            languages.push(self.create_language("Node.js", "node", path, version, ComponentKind::Interpreter));
-        }
-
-        // Java
-        if let Some((path, version)) = self.check_command("java", "-version") {
-            let first_line = version.lines().next().unwrap_or(&version).to_string();
-            languages.push(self.create_language("Java", "java", path, first_line, ComponentKind::Interpreter));
-        }
-
-        // Ruby
         if let Some((path, version)) = self.check_command("ruby", "--version") {
             languages.push(self.create_language("Ruby", "ruby", path, version, ComponentKind::Interpreter));
         }
-
-        // PHP
         if let Some((path, version)) = self.check_command("php", "--version") {
              let first_line = version.lines().next().unwrap_or(&version).to_string();
             languages.push(self.create_language("PHP", "php", path, first_line, ComponentKind::Interpreter));
+        }
+        if let Some((path, version)) = self.check_command("perl", "--version") {
+            languages.push(self.create_language("Perl", "perl", path, version, ComponentKind::Interpreter));
+        }
+        if let Some((path, version)) = self.check_command("lua", "-v") {
+            languages.push(self.create_language("Lua", "lua", path, version, ComponentKind::Interpreter));
+        }
+
+        // JavaScript / TypeScript Runtimes
+        if let Some((path, version)) = self.check_command("node", "--version") {
+            languages.push(self.create_language("Node.js", "node", path, version, ComponentKind::Interpreter));
+        }
+        if let Some((path, version)) = self.check_command("bun", "--version") {
+            languages.push(self.create_language("Bun", "bun", path, version, ComponentKind::Interpreter));
+        }
+        if let Some((path, version)) = self.check_command("deno", "--version") {
+            languages.push(self.create_language("Deno", "deno", path, version, ComponentKind::Interpreter));
+        }
+
+        // Modern System Languages
+        if let Some((path, version)) = self.check_command("swift", "--version") {
+            languages.push(self.create_language("Swift", "swift", path, version, ComponentKind::Compiler));
+        }
+        if let Some((path, version)) = self.check_command("zig", "version") {
+            languages.push(self.create_language("Zig", "zig", path, version, ComponentKind::Compiler));
+        }
+        if let Some((path, version)) = self.check_command("nim", "--version") {
+            languages.push(self.create_language("Nim", "nim", path, version, ComponentKind::Compiler));
+        }
+        if let Some((path, version)) = self.check_command("crystal", "--version") {
+            languages.push(self.create_language("Crystal", "crystal", path, version, ComponentKind::Compiler));
+        }
+
+        // Functional Languages
+        if let Some((path, version)) = self.check_command("elixir", "--version") {
+            languages.push(self.create_language("Elixir", "elixir", path, version, ComponentKind::Interpreter));
+        }
+        if let Some((path, version)) = self.check_command("erl", "-noshell -eval 'io:format(\"~s\", [erlang:system_info(otp_release)]), halt().'") {
+            languages.push(self.create_language("Erlang", "erl", path, version, ComponentKind::Interpreter));
+        }
+        if let Some((path, version)) = self.check_command("clojure", "--version") {
+            languages.push(self.create_language("Clojure", "clojure", path, version, ComponentKind::Interpreter));
+        }
+        if let Some((path, version)) = self.check_command("ghc", "--version") {
+            languages.push(self.create_language("Haskell", "ghc", path, version, ComponentKind::Compiler));
+        }
+
+        // Data Science & Others
+        if let Some((path, version)) = self.check_command("julia", "--version") {
+            languages.push(self.create_language("Julia", "julia", path, version, ComponentKind::Interpreter));
+        }
+        if let Some((path, version)) = self.check_command("R", "--version") {
+             languages.push(self.create_language("R", "R", path, version, ComponentKind::Interpreter));
+        }
+        if let Some((path, version)) = self.check_command("dart", "--version") {
+            languages.push(self.create_language("Dart", "dart", path, version, ComponentKind::Compiler));
         }
 
         Ok(languages)
