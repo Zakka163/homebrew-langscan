@@ -83,8 +83,11 @@ jobs:
           SHA_MACOS_ARM64=$(sha256sum artifacts/langscan-macos-arm64/langscan-macos-arm64 | awk '{ print $1 }')
           SHA_LINUX_AMD64=$(sha256sum artifacts/langscan-linux-amd64/langscan-linux-amd64 | awk '{ print $1 }')
 
-          # Update Version
+          # Update Version in Formula
           sed -i "s/version \".*\"/version \"$FORMULA_VERSION\"/" Formula/langscan.rb
+
+          # Update Version in Cargo.toml
+          sed -i "0,/^version = \".*\"/s//version = \"$FORMULA_VERSION\"/" Cargo.toml
 
           # Update macOS Intel (amd64)
           sed -i -E "/url \".*langscan-macos-amd64\"/!b;n;s/sha256 \".*\"/sha256 \"$SHA_MACOS_AMD64\"/" Formula/langscan.rb
@@ -103,12 +106,13 @@ jobs:
 
           # Verify the changes
           cat Formula/langscan.rb
+          cat Cargo.toml
 
       - name: Commit and Push
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add Formula/langscan.rb
-          git commit -m "Update Formula to ${{ github.ref_name }} [skip ci]" || echo "No changes to commit"
+          git add Formula/langscan.rb Cargo.toml
+          git commit -m "Update version to ${{ github.ref_name }} [skip ci]" || echo "No changes to commit"
           git push origin HEAD:main
 
