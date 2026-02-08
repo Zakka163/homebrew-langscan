@@ -81,11 +81,15 @@ jobs:
         with:
           path: artifacts
 
-      - name: Update Formula
+      - name: Update Formula and Cargo.toml
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           REPO="${GITHUB_REPOSITORY}"
+          
+          # Update Cargo.toml version
+          perl -i -pe "s/^version = \".*\"/version = \"$VERSION\"/ if !\$done++" Cargo.toml
 
+          # Update Homebrew Formula
           SHA_LINUX=$(sha256sum artifacts/langscan-linux-amd64/langscan-linux-amd64 | awk '{print $1}')
           SHA_MAC_AMD=$(sha256sum artifacts/langscan-macos-amd64/langscan-macos-amd64 | awk '{print $1}')
           SHA_MAC_ARM=$(sha256sum artifacts/langscan-macos-arm64/langscan-macos-arm64 | awk '{print $1}')
@@ -103,13 +107,14 @@ jobs:
 
           sed -i "s|homepage \".*\"|homepage \"https://github.com/$REPO\"|" Formula/langscan.rb
 
-          echo "===== UPDATED FORMULA ====="
+          echo "===== UPDATED METADATA ====="
+          cat Cargo.toml
           cat Formula/langscan.rb
 
-      - name: Commit and push formula
+      - name: Commit and push changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Formula/langscan.rb
-          git commit -m "chore: bump Homebrew formula to ${GITHUB_REF_NAME}" || echo "No changes"
+          git add Formula/langscan.rb Cargo.toml
+          git commit -m "chore: bump version to ${GITHUB_REF_NAME} [skip ci]" || echo "No changes"
           git push origin HEAD:main
