@@ -1,19 +1,19 @@
 class Langscan < Formula
   desc "Scan installed programming languages"
   homepage "https://github.com/Zakka163/homebrew-langscan"
-  version "0.3.1"
+  version "0.3.2"
 
   if OS.mac?
     if Hardware::CPU.intel?
-      url "https://github.com/Zakka163/homebrew-langscan/releases/download/v0.3.1/langscan-macos-amd64"
-      sha256 "780cdc61103517e777a9655ba301d2c2b6b65908667b7433be231caf53cfea2c"
+      url "https://github.com/Zakka163/homebrew-langscan/releases/download/v0.3.2/langscan-macos-amd64"
+      sha256 "b9e39c196264fd25b2c2132f2eb34418ded3007911edf290c315d3130ff04ca2"
     elsif Hardware::CPU.arm?
-      url "https://github.com/Zakka163/homebrew-langscan/releases/download/v0.3.1/langscan-macos-arm64"
-      sha256 "0dd55b8a959c9d5eda914df954d4398275104558086a6ee2456de92622c8ea97"
+      url "https://github.com/Zakka163/homebrew-langscan/releases/download/v0.3.2/langscan-macos-arm64"
+      sha256 "4085d1cd094d5122679afdddf426a5b69a3df86c8095d9c836f76c5c3524dd6f"
     end
   elsif OS.linux?
-    url "https://github.com/Zakka163/homebrew-langscan/releases/download/v0.3.1/langscan-linux-amd64"
-    sha256 "577ed0a88f9ace497bbfc87d23a5c4440e2b8dc858eb28cfa0f77b664a392e59"
+    url "https://github.com/Zakka163/homebrew-langscan/releases/download/v0.3.2/langscan-linux-amd64"
+    sha256 "33087830fe86d86165d706c0e6b8107a7f1d083910e25d67d282c7241897b708"
   end
 
   def install
