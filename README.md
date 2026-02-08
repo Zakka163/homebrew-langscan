@@ -1,50 +1,115 @@
 # LANGSCAN
 
 A high-performance CLI tool to inventory languages, toolchains, and runtimes on your system.
+Built in Rust for speed and reliability.
 
-## Features
+## 🚀 Features
 
-- 🚀 **Fast**: Written in Rust for maximum performance.
-- 🔍 **Accurate**: Detects installed languages (currently supports Rust and Go).
-- 📊 **Flexible Output**: Supports both human-readable tables and machine-parsable JSON.
+- **Blazing Fast**: Written in Rust for maximum performance and low memory footprint.
+- **Accurate Detection**: Identifies installed languages, versions, and paths.
+- **Flexible Output**: Supports both human-readable ASCII tables and machine-parsable JSON.
+- **Cross-Platform**: Designed for macOS and Linux (Windows support coming).
 
-## Usage
+## 📦 Supported Languages
 
-### Building
+LangScan currently detects:
+
+- **Rust** (`rustc`)
+- **Go** (`go`)
+- **Python** (`python3` / `python`)
+- **Node.js** (`node`)
+- **Java** (`java`)
+- **Ruby** (`ruby`)
+- **PHP** (`php`)
+
+## 🛠️ Installation
+
+### From Source
+
+Ensure you have Rust installed (via [rustup](https://rustup.rs/)).
 
 ```bash
+git clone <repository-url>
+cd langscan
 cargo build --release
 ```
 
-### Scanning
+The binary will be available at `target/release/langscan`.
 
-**Basic Scan (Table Output):**
+## 💻 Usage
+
+### Basic Scan (Table Output)
+
+Run a quick scan to see a neat table of installed languages:
+
 ```bash
 cargo run -- scan
+# Or if built:
+./target/release/langscan scan
 ```
 
-**JSON Output:**
+**Output Example:**
+
+```text
+┌──────────┬────────────┬──────────────────────────────────────────────────┐
+│ Language ┆ Version    ┆ Path                                             │
+╞══════════╪════════════╪══════════════════════════════════════════════════╡
+│ Rust     ┆ 1.91.1     ┆ /Users/mymac/.cargo/bin/rustc                    │
+├╌╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┤
+│ Python   ┆ 3.13.5     ┆ /usr/local/bin/python3                           │
+├╌╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┤
+│ Node.js  ┆ 23.8.0     ┆ /Users/mymac/.nvm/versions/node/v23.8.0/bin/node │
+└──────────┴────────────┴──────────────────────────────────────────────────┘
+```
+
+### JSON Output (For Integrations)
+
+Generate a JSON output for use in scripts, CI/CD pipelines, or other tools.
+
 ```bash
 cargo run -- scan --format json
 ```
 
-## Troubleshooting
+**Output Example:**
+
+```json
+[
+  {
+    "name": "Rust",
+    "version": "1.91.1",
+    "toolchain": {
+      "path": "/Users/mymac/.cargo/bin/rustc",
+      "components": [
+        {
+          "name": "rustc",
+          "version": "1.91.1",
+          "path": "/Users/mymac/.cargo/bin/rustc",
+          "kind": "Compiler"
+        }
+      ]
+    }
+  }
+]
+```
+
+## ❓ Troubleshooting
 
 ### "failed to join paths" Error (macOS)
 
 If you see an error like:
-```
+```text
 error: failed to join paths from `$DYLD_FALLBACK_LIBRARY_PATH` together ... Caused by: path segment contains separator `:`
 ```
 
-This is because the project directory contains a colon (`:`), which confuses the dynamic linker on macOS.
+This occurs if your project path contains a colon (`:`).
 
-**Workaround 1 (Recommended):**
-Set the `CARGO_TARGET_DIR` environment variable to a path without colons (e.g., `/tmp`):
+**Solution:**
+Set `CARGO_TARGET_DIR` to a safe location:
 
 ```bash
 CARGO_TARGET_DIR=/tmp/langscan_target cargo run -- scan
 ```
 
-**Workaround 2:**
-Rename the project directory to remove the colon (e.g., change `sakadev:langscan` to `sakadev-langscan`).
+---
+
+Made with ❤️ by zakka163
