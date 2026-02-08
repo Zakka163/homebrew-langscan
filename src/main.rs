@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
 use anyhow::Result;
 use comfy_table::Table;
 use comfy_table::presets::UTF8_FULL;
@@ -9,11 +9,13 @@ mod scanner;
 use crate::scanner::{Scanner, PathScanner};
 
 #[derive(Parser)]
-#[command(name = "langscan")]
-#[command(about = "A tool to inventory languages and tools", long_about = None)]
+#[command(name = "langscan", version, about = "A tool to inventory languages and tools", long_about = None)]
 struct Cli {
     #[command(subcommand)]
-    command: Commands,
+    command: Option<Commands>,
+
+    #[arg(short = 'v', long = "v")]
+    version_flag: bool,
 }
 
 #[derive(Subcommand)]
@@ -29,8 +31,13 @@ enum Commands {
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
+    if cli.version_flag {
+        println!("langscan {}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
+
     match &cli.command {
-        Commands::Scan { format } => {
+        Some(Commands::Scan { format }) => {
             let scanner = PathScanner::new(); // Initialize scanner
             let languages = scanner.scan()?;
 
@@ -55,6 +62,9 @@ fn main() -> Result<()> {
                     println!("{table}");
                 }
             }
+        }
+        None => {
+            Cli::command().print_help()?;
         }
     }
 
