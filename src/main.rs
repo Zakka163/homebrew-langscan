@@ -33,7 +33,6 @@ enum Commands {
         #[arg(short, long, value_name = "FIELDS", help = "Sort by: name, size, date, modified (e.g., --sort size,name)")]
         sort: Option<String>,
     },
-    /// Print the tool's version information.
     Version,
 }
 

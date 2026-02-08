@@ -1,4 +1,4 @@
-# 🔍 LANGSCAN
+# LANGSCAN
 
 A high-performance CLI tool to inventory languages, toolchains, and runtimes on your system. Built in Rust for maximum speed and reliability.
 

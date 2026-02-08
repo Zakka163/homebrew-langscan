@@ -24,13 +24,11 @@ impl PathScanner {
     }
 
     fn find_path(&self, cmd: &str) -> Option<std::path::PathBuf> {
-        // First try standard which
         if let Ok(path) = which(cmd) {
             self.debug_log(&format!("Found {} in PATH: {}", cmd, path.display()));
             return Some(path);
         }
 
-        // Try common paths
         let common_paths = vec![
             "/opt/homebrew/bin",
             "/usr/local/bin",
@@ -48,12 +46,11 @@ impl PathScanner {
             }
         }
 
-        // Try common version managers for node
+       
         if cmd == "node" {
             if let Ok(home) = std::env::var("HOME") {
                 let home_path = std::path::Path::new(&home);
                 
-                // NVM
                 let nvm_dir = home_path.join(".nvm/versions/node");
                 if nvm_dir.exists() {
                     if let Ok(entries) = std::fs::read_dir(nvm_dir) {
@@ -67,7 +64,7 @@ impl PathScanner {
                     }
                 }
 
-                // FNM
+              
                 let fnm_dir = home_path.join(".local/share/fnm/node-versions");
                 if fnm_dir.exists() {
                     if let Ok(entries) = std::fs::read_dir(fnm_dir) {
@@ -81,7 +78,7 @@ impl PathScanner {
                     }
                 }
 
-                // ASDF
+         
                 let asdf_dir = home_path.join(".asdf/installs/nodejs");
                 if asdf_dir.exists() {
                     if let Ok(entries) = std::fs::read_dir(asdf_dir) {
@@ -103,7 +100,6 @@ impl PathScanner {
 
     fn check_command(&self, cmd: &str, version_arg: &str) -> Option<(std::path::PathBuf, String)> {
         if let Some(path) = self.find_path(cmd) {
-            // Check version
             match Command::new(&path).arg(version_arg).output() {
                 Ok(output) => {
                     if output.status.success() {
@@ -111,7 +107,6 @@ impl PathScanner {
                         if !stdout.is_empty() {
                             return Some((path, stdout));
                         }
-                        // Some tools (like Java) print version to stderr
                         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
                         if !stderr.is_empty() {
                             return Some((path, stderr));
@@ -191,7 +186,7 @@ impl PathScanner {
                     trimmed.to_string()
                 }
             },
-            "erl" => trimmed.to_string(), // Handled by specific eval command
+            "erl" => trimmed.to_string(), 
             _ => trimmed.to_string()
         }
     }
@@ -199,7 +194,7 @@ impl PathScanner {
     fn create_language(&self, name: &str, cmd: &str, path: std::path::PathBuf, raw_version: String, kind: ComponentKind) -> Language {
         let version = self.extract_version(&raw_version, cmd);
         
-        // Fetch metadata
+
         let metadata = std::fs::metadata(&path).ok();
         let size = metadata.as_ref().map(|m| m.len()).unwrap_or(0);
         let modified_at = metadata.as_ref()
