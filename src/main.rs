@@ -22,6 +22,10 @@ enum Commands {
         /// Output format (table, json)
         #[arg(short, long, default_value = "table")]
         format: String,
+
+        /// Show debug information
+        #[arg(short, long)]
+        debug: bool,
     },
     /// Print version information
     Version,
@@ -31,8 +35,8 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
-        Some(Commands::Scan { format }) => {
-            let scanner = PathScanner::new(); // Initialize scanner
+        Some(Commands::Scan { format, debug }) => {
+            let scanner = PathScanner::new(*debug); // Initialize scanner with debug flag
             let languages = scanner.scan()?;
 
             match format.as_str() {
